@@ -1,0 +1,59 @@
+{
+    "name": "@aero/ui",
+    "version": "1.0.0",
+    "description": "Aero UI - Shared React components for all Aero modules",
+    "private": true,
+    "type": "module",
+    "main": "resources/js/index.js",
+    "exports": {
+        ".": "./resources/js/index.js",
+        "./Components/*": "./resources/js/Components/*",
+        "./Tables/*": "./resources/js/Tables/*",
+        "./Forms/*": "./resources/js/Forms/*",
+        "./Hooks/*": "./resources/js/Hooks/*",
+        "./Context/*": "./resources/js/Context/*",
+        "./Layouts/*": "./resources/js/Layouts/*",
+        "./utils/*": "./resources/js/utils/*",
+        "./theme/*": "./resources/js/theme/*"
+    },
+    "dependencies": {
+        "@dnd-kit/core": "^6.3.1",
+        "@dnd-kit/sortable": "^10.0.0",
+        "@dnd-kit/utilities": "^3.2.2",
+    
+        "@fontsource/roboto": "^5.2.6",
+ 
+        "@heroicons/react": "^2.2.0",
+        "@heroui/react": "^2.8.5",
+       
+        "@inertiajs/react": "^2.0.0",
+        "@internationalized/date": "^3.5.6",
+     
+        "chart.js": "^4.4.9",
+        "clsx": "^2.1.1",
+        "date-fns": "^4.1.0",
+        "dayjs": "^1.11.12",
+        "framer-motion": "^11.18.2",
+        "js-cookie": "^3.0.5",
+        "laravel-precognition-react": "^0.7.3",
+        "leaflet": "^1.9.4",
+        "leaflet-routing-machine": "^3.2.12",
+        "lodash": "^4.17.21",
+        "lucide-react": "^0.469.0",
+        
+        "prop-types": "^15.8.1",
+        "react-chartjs-2": "^5.3.0",
+        "react-hook-form": "^7.62.0",
+        "react-hot-toast": "^2.5.2",
+        "react-leaflet": "^4.2.1",
+        "react-toastify": "^11.0.5",
+        "recharts": "^2.15.3",
+        "tailwind-merge": "^3.3.1",
+        "uuid": "^13.0.0",
+        "zod": "^4.0.17"
+    },
+    "peerDependencies": {
+        "react": "^18.0.0",
+        "react-dom": "^18.0.0"
+    }
+}
