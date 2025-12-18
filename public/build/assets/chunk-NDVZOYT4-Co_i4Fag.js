@@ -1,0 +1,1 @@
+import{v as u,w as v,x as p,y as x,j as C}from"./app-B1idACz3.js";var e=u((r,t)=>{var o;const{as:l,className:c,children:n,...d}=r,f=l||"div",m=v(t),{slots:s,classNames:a}=p(),i=x(a?.footer,c);return C.jsx(f,{ref:m,className:(o=s.footer)==null?void 0:o.call(s,{class:i}),...d,children:n})});e.displayName="HeroUI.CardFooter";var R=e;export{R as c};

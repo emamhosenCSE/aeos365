@@ -16,10 +16,8 @@ use Aero\Core\Services\PlatformErrorReporter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-// Import TenantOnboardingController from platform package (if platform is installed)
-if (class_exists('Aero\Platform\Http\Controllers\TenantOnboardingController')) {
-    use Aero\Platform\Http\Controllers\TenantOnboardingController;
-}
+// Note: TenantOnboardingController is referenced dynamically if platform package is installed
+// We don't use a 'use' statement here since it may not exist
 
 /*
 |--------------------------------------------------------------------------
@@ -71,6 +69,19 @@ Route::post('/api/error-log', function (Request $request) {
         'message' => 'Error reported successfully',
     ]);
 })->name('core.api.error-log')->middleware('throttle:30,1')->withoutMiddleware(['auth']);
+
+// VERSION CHECK API - Public endpoint for frontend version checking (No Auth Required)
+Route::post('/api/version/check', function (Request $request) {
+    $clientVersion = $request->input('version', '1.0.0');
+    $serverVersion = config('app.version', '1.0.0');
+    
+    return response()->json([
+        'version_match' => $clientVersion === $serverVersion,
+        'client_version' => $clientVersion,
+        'server_version' => $serverVersion,
+        'timestamp' => now()->toIso8601String(),
+    ]);
+})->name('core.api.version.check')->middleware('throttle:30,1')->withoutMiddleware(['auth']);
 
 // ============================================================================
 // ROOT ROUTE - Redirect to dashboard or login
@@ -389,19 +400,6 @@ Route::middleware('auth:web')->group(function () {
             Route::get('/refresh', [RoleController::class, 'refreshData'])->name('refresh');
             Route::get('/export', [RoleController::class, 'exportRoles'])->name('export');
         });
-        
-        // Version Check API (Public - merged from api.php)
-        Route::post('/version/check', function (Request $request) {
-            $clientVersion = $request->input('version', '1.0.0');
-            $serverVersion = config('app.version', '1.0.0');
-            
-            return response()->json([
-                'version_match' => $clientVersion === $serverVersion,
-                'client_version' => $clientVersion,
-                'server_version' => $serverVersion,
-                'timestamp' => now()->toIso8601String(),
-            ]);
-        })->name('version.check')->withoutMiddleware(['auth']);
     });
     
     // ========================================================================
