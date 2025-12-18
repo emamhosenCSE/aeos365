@@ -98,8 +98,8 @@ export default function SelectPlan({ steps = [], currentStep, savedData = {}, pl
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-12 space-y-6 sm:space-y-8">
         <div className="space-y-2 sm:space-y-3 text-center">
           <p className={`text-[10px] sm:text-sm uppercase tracking-[0.3em] ${palette.badge}`}>Step 4</p>
-          <h1 className={`text-2xl sm:text-4xl font-semibold ${palette.heading} px-2`}>Choose Your Plan & Modules</h1>
-          <p className={`${palette.copy} text-sm sm:text-base px-2`}>Select a pre-configured plan or customize with individual modules. Core platform features are always included.</p>
+          <h1 className={`text-2xl sm:text-4xl font-semibold ${palette.heading} px-2`}>Choose Your Plan & Products</h1>
+          <p className={`${palette.copy} text-sm sm:text-base px-2`}>Select a pre-configured plan or customize with individual products.</p>
         </div>
 
         <ProgressSteps steps={steps} currentStep={currentStep} />
