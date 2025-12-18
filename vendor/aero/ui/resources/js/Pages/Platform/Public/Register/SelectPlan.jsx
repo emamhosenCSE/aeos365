@@ -231,11 +231,17 @@ export default function SelectPlan({ steps = [], currentStep, savedData = {}, pl
                           {plan.modules && plan.modules.length > 0 && (
                             <div>
                               <p className={`text-xs font-semibold ${palette.muted} mb-2`}>INCLUDED MODULES:</p>
-                              <div className="flex flex-wrap gap-1">
+                              <div className="space-y-2">
                                 {plan.modules.map((module) => (
-                                  <Chip key={module.id} size="sm" variant="flat" color="success">
-                                    {module.name}
-                                  </Chip>
+                                  <div key={module.id} className="flex items-start gap-2">
+                                    <CheckCircleIcon className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className={`font-medium ${palette.heading} text-sm`}>{module.name}</p>
+                                      {module.description && (
+                                        <p className={`text-xs ${palette.muted} line-clamp-2`}>{module.description}</p>
+                                      )}
+                                    </div>
+                                  </div>
                                 ))}
                               </div>
                             </div>

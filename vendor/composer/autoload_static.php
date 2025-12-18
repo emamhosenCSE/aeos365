@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
+class ComposerStaticInited2c25f22527022a76fbc30d9b27c1fd
 {
     public static $files = array (
         '6e3fae29631ef280660b3cdad06f25a8' => __DIR__ . '/..' . '/symfony/deprecation-contracts/function.php',
@@ -1076,6 +1076,7 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         'Aero\\HRM\\Models\\TrainingFeedback' => __DIR__ . '/..' . '/aero/hrm/src/Models/TrainingFeedback.php',
         'Aero\\HRM\\Models\\TrainingMaterial' => __DIR__ . '/..' . '/aero/hrm/src/Models/TrainingMaterial.php',
         'Aero\\HRM\\Models\\TrainingSession' => __DIR__ . '/..' . '/aero/hrm/src/Models/TrainingSession.php',
+        'Aero\\HRM\\Notifications\\WelcomeEmployeeNotification' => __DIR__ . '/..' . '/aero/hrm/src/Notifications/WelcomeEmployeeNotification.php',
         'Aero\\HRM\\Policies\\AttendancePolicy' => __DIR__ . '/..' . '/aero/hrm/src/Policies/AttendancePolicy.php',
         'Aero\\HRM\\Policies\\BenefitPolicy' => __DIR__ . '/..' . '/aero/hrm/src/Policies/BenefitPolicy.php',
         'Aero\\HRM\\Policies\\CompetencyPolicy' => __DIR__ . '/..' . '/aero/hrm/src/Policies/CompetencyPolicy.php',
@@ -1096,6 +1097,7 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         'Aero\\HRM\\Services\\BaseAttendanceValidator' => __DIR__ . '/..' . '/aero/hrm/src/Services/BaseAttendanceValidator.php',
         'Aero\\HRM\\Services\\BulkLeaveService' => __DIR__ . '/..' . '/aero/hrm/src/Services/BulkLeaveService.php',
         'Aero\\HRM\\Services\\DatabaseOptimizationService' => __DIR__ . '/..' . '/aero/hrm/src/Services/DatabaseOptimizationService.php',
+        'Aero\\HRM\\Services\\EmployeeOnboardingService' => __DIR__ . '/..' . '/aero/hrm/src/Services/EmployeeOnboardingService.php',
         'Aero\\HRM\\Services\\HRMetricsAggregatorService' => __DIR__ . '/..' . '/aero/hrm/src/Services/HRMetricsAggregatorService.php',
         'Aero\\HRM\\Services\\IpLocationValidator' => __DIR__ . '/..' . '/aero/hrm/src/Services/IpLocationValidator.php',
         'Aero\\HRM\\Services\\LeaveApprovalService' => __DIR__ . '/..' . '/aero/hrm/src/Services/LeaveApprovalService.php',
@@ -1112,6 +1114,10 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         'Aero\\HRM\\Services\\QrCodeValidator' => __DIR__ . '/..' . '/aero/hrm/src/Services/QrCodeValidator.php',
         'Aero\\HRM\\Services\\RouteWaypointValidator' => __DIR__ . '/..' . '/aero/hrm/src/Services/RouteWaypointValidator.php',
         'Aero\\HRM\\Services\\TaxRuleEngine' => __DIR__ . '/..' . '/aero/hrm/src/Services/TaxRuleEngine.php',
+        'Aero\\Hrm\\Console\\Commands\\SendOnboardingRemindersCommand' => __DIR__ . '/..' . '/aero/hrm/src/Console/Commands/SendOnboardingRemindersCommand.php',
+        'Aero\\Hrm\\Jobs\\OnboardingReminderJob' => __DIR__ . '/..' . '/aero/hrm/src/Jobs/OnboardingReminderJob.php',
+        'Aero\\Hrm\\Notifications\\ManagerOnboardingReminderNotification' => __DIR__ . '/..' . '/aero/hrm/src/Notifications/ManagerOnboardingReminderNotification.php',
+        'Aero\\Hrm\\Notifications\\OnboardingReminderNotification' => __DIR__ . '/..' . '/aero/hrm/src/Notifications/OnboardingReminderNotification.php',
         'Aero\\Platform\\AeroPlatformServiceProvider' => __DIR__ . '/..' . '/aero/platform/src/AeroPlatformServiceProvider.php',
         'Aero\\Platform\\Console\\Commands\\AggregateTenantStatsCommand' => __DIR__ . '/..' . '/aero/platform/src/Console/Commands/AggregateTenantStatsCommand.php',
         'Aero\\Platform\\Console\\Commands\\AssignSuperAdminRole' => __DIR__ . '/..' . '/aero/platform/src/Console/Commands/AssignSuperAdminRole.php',
@@ -10106,10 +10112,10 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584::$prefixDirsPsr4;
-            $loader->prefixesPsr0 = ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584::$prefixesPsr0;
-            $loader->classMap = ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInited2c25f22527022a76fbc30d9b27c1fd::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInited2c25f22527022a76fbc30d9b27c1fd::$prefixDirsPsr4;
+            $loader->prefixesPsr0 = ComposerStaticInited2c25f22527022a76fbc30d9b27c1fd::$prefixesPsr0;
+            $loader->classMap = ComposerStaticInited2c25f22527022a76fbc30d9b27c1fd::$classMap;
 
         }, null, ClassLoader::class);
     }
