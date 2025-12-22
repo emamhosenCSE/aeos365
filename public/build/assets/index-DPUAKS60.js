@@ -1,0 +1,1 @@
+import{c as i}from"./SelectionManager-BDqxcBRc.js";import{X as o}from"./app-BrpQ0UwM.js";const n=new WeakMap;function d(e){let a=n.get(e);if(a!=null)return a;let t=0,f=c=>{for(let r of c)r.type==="section"?f(i(r,e)):r.type==="item"&&t++};return f(e),n.set(e,t),t}var s=700;function p(){return o()||typeof window>"u"?!1:window.screen.width<=s}export{d as $,p as u};
