@@ -11,6 +11,7 @@ use Aero\Core\Http\Controllers\Auth\EmailVerificationController;
 use Aero\Core\Http\Controllers\Auth\NewPasswordController;
 use Aero\Core\Http\Controllers\Auth\PasswordResetLinkController;
 use Aero\Core\Http\Controllers\DashboardController;
+use Aero\Core\Http\Controllers\InstallationController;
 use Aero\Core\Http\Controllers\Settings\SystemSettingController;
 use Aero\Core\Services\PlatformErrorReporter;
 use Illuminate\Http\Request;
@@ -18,6 +19,21 @@ use Illuminate\Support\Facades\Route;
 
 // Note: TenantOnboardingController is referenced dynamically if platform package is installed
 // We don't use a 'use' statement here since it may not exist
+
+/*
+|--------------------------------------------------------------------------
+| Installation Routes (Standalone Mode Only)
+|--------------------------------------------------------------------------
+*/
+if (config('aero.mode') === 'standalone') {
+    Route::middleware('web')->prefix('install')->name('install.')->group(function () {
+        Route::get('/', [InstallationController::class, 'index'])->name('index');
+        Route::get('/requirements', [InstallationController::class, 'requirements'])->name('requirements');
+        Route::get('/database', [InstallationController::class, 'database'])->name('database');
+        Route::post('/test-database', [InstallationController::class, 'testDatabase'])->name('test-database');
+        Route::post('/install', [InstallationController::class, 'install'])->name('process');
+    });
+}
 
 /*
 |--------------------------------------------------------------------------
