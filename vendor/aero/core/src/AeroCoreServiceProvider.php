@@ -15,6 +15,7 @@ use Aero\Core\Services\StandaloneTenantScope;
 use Aero\Core\Services\UserRelationshipRegistry;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Fortify\Fortify;
 
 /**
  * AeroCoreServiceProvider
@@ -30,6 +31,10 @@ class AeroCoreServiceProvider extends ServiceProvider
     public function register(): void
     {
         try {
+            // Disable Fortify's default routes - Core provides its own auth routes
+            // with Inertia.js rendering instead of Fortify's view responses
+            Fortify::ignoreRoutes();
+
             // Override the Migrator to exclude app's migration directory
             // Core and module packages provide all necessary migrations
             $this->app->extend('migrator', function ($migrator, $app) {
@@ -195,10 +200,55 @@ class AeroCoreServiceProvider extends ServiceProvider
 
             // Register core navigation from config/module.php
             $this->registerCoreNavigation();
+
+            // Register Core dashboard widgets
+            $this->registerDashboardWidgets();
         } catch (\Throwable $e) {
             // Ignore errors during early boot/package discovery
             // These will be called again when the app is fully booted
         }
+    }
+
+    /**
+     * Register Core widgets for the Dashboard.
+     *
+     * Core widgets are fundamental widgets that appear on every dashboard:
+     * - Welcome/greeting widget (position: welcome)
+     * - System stats widget (position: stats_row)
+     * - Quick actions widget (position: stats_row)
+     * - Recent activity widget (position: main_left)
+     * - Notifications widget (position: sidebar)
+     * - Security overview widget (position: sidebar)
+     * - Active modules widget (position: sidebar)
+     *
+     * Note: Holidays and Organization widgets are in HRM package
+     */
+    protected function registerDashboardWidgets(): void
+    {
+        // Only register if the registry is available
+        if (! $this->app->bound(DashboardWidgetRegistry::class)) {
+            return;
+        }
+
+        $registry = $this->app->make(DashboardWidgetRegistry::class);
+
+        // Register Core widgets (order matters for display)
+        $registry->registerMany([
+            // Welcome header (full width)
+            new \Aero\Core\Widgets\WelcomeWidget(),
+            
+            // Stats row (full width grid)
+            new \Aero\Core\Widgets\SystemStatsWidget(),
+            new \Aero\Core\Widgets\QuickActionsWidget(),
+            
+            // Main content area (left 2/3)
+            new \Aero\Core\Widgets\RecentActivityWidget(),
+            new \Aero\Core\Widgets\NotificationsWidget(),
+            
+            // Sidebar area (right 1/3)
+            new \Aero\Core\Widgets\SecurityOverviewWidget(),
+            new \Aero\Core\Widgets\ActiveModulesWidget(),
+        ]);
     }
 
     /**
