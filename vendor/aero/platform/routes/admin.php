@@ -16,6 +16,7 @@ use Aero\Platform\Http\Controllers\PlanModuleController;
 use Aero\Platform\Http\Controllers\PlatformSettingController;
 use Aero\Platform\Http\Controllers\SystemMonitoring\AuditLogController;
 use Aero\Platform\Http\Controllers\TenantController;
+use Aero\Platform\Http\Middleware\IdentifyDomainContext;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -52,28 +53,40 @@ use Inertia\Inertia;
 | This ensures authentication is checked against the landlord_users table
 | in the central database, not the tenant users table.
 |
+| Domain Context Check:
+| - These routes should ONLY be accessible from admin subdomain (admin.domain.com)
+| - Domain restriction is enforced by middleware, not at route registration time
+| - Routes are registered unconditionally, then filtered by request context
+|
 */
 
-// =========================================================================
-// LANDLORD AUTHENTICATION ROUTES
-// =========================================================================
+// NOTE: Domain context check moved to middleware layer!
+// WRONG: Checking domain_context at route registration time - middleware hasn't run yet!
+// RIGHT: Register all routes, let middleware filter by domain at request time.
+// The IdentifyDomainContext middleware sets context on each request,
+// and route middleware (or controllers) can check it then.
 
-Route::middleware('guest:landlord')->group(function () {
-    Route::get('/login', [AuthenticatedSessionController::class, 'create'])
-        ->name('admin.login');
+Route::middleware('admin.domain')->group(function () {
+    // =========================================================================
+    // LANDLORD AUTHENTICATION ROUTES
+    // =========================================================================
 
-    Route::post('/login', [AuthenticatedSessionController::class, 'store'])
-        ->name('admin.login.store');
-});
+    Route::middleware('guest:landlord')->group(function () {
+        Route::get('/login', [AuthenticatedSessionController::class, 'create'])
+            ->name('admin.login');
 
-Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
-    ->middleware('auth:landlord')
-    ->name('admin.logout');
+        Route::post('/login', [AuthenticatedSessionController::class, 'store'])
+            ->name('admin.login.store');
+    });
 
-// Root redirects to dashboard (or login if not authenticated)
-Route::get('/', function () {
-    return redirect()->route('admin.dashboard');
-})->middleware('auth:landlord');
+    Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
+        ->middleware('auth:landlord')
+        ->name('admin.logout');
+
+    // Root redirects to dashboard (or login if not authenticated)
+    Route::get('/', function () {
+        return redirect()->route('admin.dashboard');
+    })->middleware('auth:landlord');
 
 // Session check route for admin domain (uses landlord guard)
 Route::get('/session-check', function () {
@@ -889,4 +902,5 @@ Route::middleware(['auth:landlord'])->group(function () {
             Route::post('/bulk-destroy', [ErrorLogController::class, 'bulkDestroy'])->name('bulk-destroy');
         });
     });
+});
 });

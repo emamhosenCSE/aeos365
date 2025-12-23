@@ -62,7 +62,7 @@ class AeroPlatformServiceProvider extends ServiceProvider
         $this->overrideMigratorForLandlord();
 
         // Merge platform configs
-        $this->mergeConfigFrom(__DIR__.'/../config/modules.php', 'aero-platform.modules');
+        // Module definitions are in config/module.php and loaded by ModuleDiscoveryService
         $this->mergeConfigFrom(__DIR__.'/../config/tenancy.php', 'tenancy');
         $this->mergeConfigFrom(__DIR__.'/../config/platform.php', 'platform');
 
@@ -301,6 +301,7 @@ class AeroPlatformServiceProvider extends ServiceProvider
         $router->aliasMiddleware('module', \Aero\Platform\Http\Middleware\ModuleAccessMiddleware::class);
         $router->aliasMiddleware('check.module', \Aero\Platform\Http\Middleware\CheckModuleAccess::class);
         $router->aliasMiddleware('platform.domain', \Aero\Platform\Http\Middleware\EnsurePlatformDomain::class);
+        $router->aliasMiddleware('admin.domain', \Aero\Platform\Http\Middleware\EnsureAdminDomain::class);
         $router->aliasMiddleware('enforce.subscription', \Aero\Platform\Http\Middleware\EnforceSubscription::class);
         $router->aliasMiddleware('maintenance', \Aero\Platform\Http\Middleware\CheckMaintenanceMode::class);
         $router->aliasMiddleware('permission', \Aero\Platform\Http\Middleware\PermissionMiddleware::class);
@@ -444,26 +445,25 @@ class AeroPlatformServiceProvider extends ServiceProvider
      * 1. web.php - Platform domain (domain.com): Landing, registration, public pages, installation
      * 2. admin.php - Admin domain (admin.domain.com): Landlord management, tenant admin
      *
-     * Domain-based routing prevents conflicts:
-     * - domain.com → web.php (public platform routes)
-     * - admin.domain.com → admin.php (landlord/admin routes)
-     * - tenant.domain.com → handled by aero-core and modules (NOT loaded here)
+     * Domain-based routing strategy:
+     * - We DO NOT use Laravel's 'domain' constraint in Route::group()
+     * - Instead, we rely on IdentifyDomainContext middleware to set context
+     * - Route files themselves check context and return 404 if accessed from wrong domain
+     * - This approach is more flexible and works without requiring .env configuration
      */
     protected function registerRoutes(): void
     {
         // Admin routes (for admin.domain.com - landlord guard)
+        // These routes are always registered but will check domain context via middleware
         Route::group([
             'middleware' => ['web'],
-            'domain' => $this->getAdminDomain(),
         ], function () {
             $this->loadRoutesFrom(__DIR__.'/../routes/admin.php');
         });
 
         // Platform web routes (for domain.com ONLY - public pages, registration)
-        // CRITICAL: Domain restriction prevents conflicts with tenant routes
         Route::group([
             'middleware' => ['web'],
-            'domain' => $this->getPlatformDomain(),
         ], function () {
             $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
         });
@@ -472,7 +472,6 @@ class AeroPlatformServiceProvider extends ServiceProvider
         // These endpoints expose available products/features for tenant applications
         Route::group([
             'middleware' => ['api'],
-            'domain' => $this->getPlatformDomain(),
             'prefix' => 'api',
         ], function () {
             $this->loadRoutesFrom(__DIR__.'/../routes/api.php');
@@ -481,7 +480,7 @@ class AeroPlatformServiceProvider extends ServiceProvider
 
     /**
      * Get the main platform domain (e.g., aeos365.test).
-     * AUTO-DETECTS from the current browser request.
+     * AUTO-DETECTS from the current browser request or falls back to configured domain.
      * Used to restrict platform.php routes to central domain only.
      */
     protected function getPlatformDomain(): string
@@ -505,8 +504,17 @@ class AeroPlatformServiceProvider extends ServiceProvider
             return $hostWithoutPort;
         }
 
-        // Fallback for console commands
-        return env('PLATFORM_DOMAIN', 'localhost');
+        // Fallback: Use configured PLATFORM_DOMAIN from .env
+        // This is critical for proper route registration during boot
+        $platformDomain = env('PLATFORM_DOMAIN');
+        if ($platformDomain) {
+            // Remove any protocol or trailing slashes
+            $platformDomain = preg_replace('#^https?://|/$#', '', $platformDomain);
+            return $platformDomain;
+        }
+
+        // Last resort fallback
+        return 'localhost';
     }
 
     /**
@@ -517,6 +525,8 @@ class AeroPlatformServiceProvider extends ServiceProvider
         // Try ADMIN_DOMAIN first (explicit configuration)
         $adminDomain = env('ADMIN_DOMAIN');
         if ($adminDomain) {
+            // Remove any protocol or trailing slashes
+            $adminDomain = preg_replace('#^https?://|/$#', '', $adminDomain);
             return $adminDomain;
         }
 
@@ -537,7 +547,7 @@ class AeroPlatformServiceProvider extends ServiceProvider
 
             // Publish config
             $this->publishes([
-                __DIR__.'/../config/modules.php' => config_path('aero-platform-modules.php'),
+                __DIR__.'/../config/platform.php' => config_path('platform.php'),
             ], 'aero-platform-config');
 
             // NOTE: No assets publishing - all frontend is handled by aero/ui package
@@ -644,13 +654,30 @@ class AeroPlatformServiceProvider extends ServiceProvider
         $this->app->resolving(\Illuminate\Auth\Middleware\Authenticate::class, function ($middleware) {
             $middleware->redirectUsing(function ($request) {
                 $host = $request->getHost();
+                
+                // Use the ParsesHostDomain trait for consistent domain detection
+                $trait = new class {
+                    use \Aero\Core\Traits\ParsesHostDomain;
+                    public function isAdmin(string $host): bool {
+                        return $this->isHostAdminDomain($host);
+                    }
+                    public function isPlatform(string $host): bool {
+                        return $this->isHostPlatformDomain($host);
+                    }
+                };
 
                 // Admin subdomain → admin.login
-                if (str_starts_with($host, 'admin.')) {
+                if ($trait->isAdmin($host)) {
                     return route('admin.login');
                 }
 
-                // Tenant/other subdomain → login
+                // Platform domain (no subdomain) → redirect to registration page
+                // Platform domain does NOT have a login route - it's for public pages and registration
+                if ($trait->isPlatform($host)) {
+                    return route('platform.register.index');
+                }
+
+                // Tenant subdomain → login
                 return route('login');
             });
         });
@@ -659,12 +686,29 @@ class AeroPlatformServiceProvider extends ServiceProvider
         // This is called when an authenticated user tries to access login/register pages
         \Illuminate\Auth\Middleware\RedirectIfAuthenticated::redirectUsing(function ($request) {
             $host = $request->getHost();
+            
+            // Use the ParsesHostDomain trait for consistent domain detection
+            $trait = new class {
+                use \Aero\Core\Traits\ParsesHostDomain;
+                public function isAdmin(string $host): bool {
+                    return $this->isHostAdminDomain($host);
+                }
+                public function isPlatform(string $host): bool {
+                    return $this->isHostPlatformDomain($host);
+                }
+            };
 
             // Admin subdomain: Check landlord guard and redirect if authenticated
-            if (str_starts_with($host, 'admin.')) {
+            if ($trait->isAdmin($host)) {
                 if (\Illuminate\Support\Facades\Auth::guard('landlord')->check()) {
                     return route('admin.dashboard');
                 }
+            }
+
+            // Platform domain: Don't redirect authenticated users
+            // They should be able to access public pages even if authenticated elsewhere
+            if ($trait->isPlatform($host)) {
+                return null;
             }
 
             // Tenant subdomain: Check web guard and redirect if authenticated

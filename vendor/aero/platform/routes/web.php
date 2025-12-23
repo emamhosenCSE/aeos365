@@ -12,6 +12,7 @@ use Aero\Platform\Http\Controllers\TenantController;
 use Aero\Platform\Http\Controllers\Webhooks\SslCommerzWebhookController;
 use Aero\Platform\Http\Controllers\Webhooks\StripeWebhookController;
 use Aero\Platform\Http\Middleware\EnsureInstallationVerified;
+use Aero\Platform\Http\Middleware\IdentifyDomainContext;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -31,16 +32,27 @@ use Inertia\Inertia;
 | Admin routes are in admin.php (for admin.domain.com).
 | Tenant routes are handled by aero-core and modules (for tenant.domain.com).
 |
+| Domain Context Check:
+| - These routes should ONLY be accessible from platform root domain (domain.com)
+| - Domain restriction is enforced by middleware, not at route registration time
+| - Routes are registered unconditionally, then filtered by request context
+|
 */
 
-// =========================================================================
-// LANDING & ROOT ROUTES
-// =========================================================================
+// NOTE: Domain context check moved to middleware layer!
+// WRONG: Checking domain_context at route registration time - middleware hasn't run yet.
+// RIGHT: Register all routes, let middleware filter by domain at request time.
+// IdentifyDomainContext sets context on each request; controllers/middleware enforce domain.
 
-Route::get('/', fn () => Inertia::render('Platform/Public/Landing'))->name('landing');
+Route::middleware('platform.domain')->group(function () {
+    // =========================================================================
+    // LANDING & ROOT ROUTES
+    // =========================================================================
 
-// Redirect /login to /register (no login on platform domain - login is on tenant/admin domains)
-Route::redirect('login', '/register', 302);
+    Route::get('/', fn () => Inertia::render('Platform/Public/Landing'))->name('landing');
+
+    // Redirect /login to /register (no login on platform domain - login is on tenant/admin domains)
+    Route::redirect('login', '/register', 302);
 
 // =========================================================================
 // MULTI-STEP TENANT REGISTRATION FLOW
@@ -82,9 +94,7 @@ Route::prefix('register')->name('platform.register.')->group(function () {
         ->name('verify-phone.verify');
 
     // Cancel registration and cleanup pending tenant
-    Route::delete('/cancel', [RegistrationController::class, 'cancelRegistration'])
-        ->name('cancel');
-
+    // =========================================================================
     Route::post('/plan', [RegistrationController::class, 'storePlan'])->name('plan.store');
     Route::post('/trial', [RegistrationController::class, 'activateTrial'])
         ->middleware('throttle:10,60')
@@ -206,4 +216,5 @@ Route::prefix('api/platform/v1')->name('api.platform.v1.')->group(function () {
     Route::post('/check-subdomain', [TenantController::class, 'checkSubdomain'])
         ->middleware('throttle:30,1')
         ->name('check-subdomain');
+});
 });
