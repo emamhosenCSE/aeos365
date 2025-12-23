@@ -12,6 +12,9 @@ class RedirectIfAuthenticated
     /**
      * Handle an incoming request.
      *
+     * Redirect authenticated users away from guest-only pages (like login).
+     * Uses Laravel's default behavior but respects guard-specific redirects.
+     *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next, string ...$guards): Response
@@ -20,7 +23,8 @@ class RedirectIfAuthenticated
 
         foreach ($guards as $guard) {
             if (Auth::guard($guard)->check()) {
-                return redirect(route('dashboard'));
+                // Use Laravel's default HOME constant or fallback to /dashboard
+                return redirect(config('fortify.home', '/dashboard'));
             }
         }
 
