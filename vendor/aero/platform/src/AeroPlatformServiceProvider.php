@@ -40,6 +40,13 @@ class AeroPlatformServiceProvider extends ServiceProvider
         // Tenant subdomains use Core's AuthenticatedSessionController
         Fortify::ignoreRoutes();
 
+        // Register global BootstrapGuard middleware FIRST
+        // This runs before route matching and handles:
+        // 1. Installation status check
+        // 2. Cross-domain redirect to platform /install if not installed
+        $kernel = $this->app->make(\Illuminate\Contracts\Http\Kernel::class);
+        $kernel->pushMiddleware(\Aero\Platform\Http\Middleware\BootstrapGuard::class);
+
         // CRITICAL: Only register tenancy if installed AND in SaaS mode
         // This prevents tenancy from being enabled during installation
         // or in standalone mode
@@ -271,12 +278,10 @@ class AeroPlatformServiceProvider extends ServiceProvider
             // so the installer can run without database-backed sessions/tables.
             $router->prependMiddlewareToGroup('web', \Aero\Platform\Http\Middleware\ForceFileSessionForInstallation::class);
 
-            // Check installation status and redirect to /install if not installed
-            // IMPORTANT: Must run BEFORE session middleware to avoid DB errors when not installed
-            $router->prependMiddlewareToGroup('web', \Aero\Platform\Http\Middleware\CheckInstallation::class);
+            // Note: BootstrapGuard is registered globally in register() method.
+            // It handles installation checks before any routing occurs.
 
             // Register IdentifyDomainContext to set context for the request
-            // and ensure it runs BEFORE CheckInstallation so it has access to domain_context
             $router->prependMiddlewareToGroup('web', \Aero\Platform\Http\Middleware\IdentifyDomainContext::class);
 
             // Register HandleInertiaRequests middleware AFTER session starts
@@ -296,7 +301,6 @@ class AeroPlatformServiceProvider extends ServiceProvider
         $router->aliasMiddleware('check.module', \Aero\Platform\Http\Middleware\CheckModuleAccess::class);
         $router->aliasMiddleware('platform.domain', \Aero\Platform\Http\Middleware\EnsurePlatformDomain::class);
         $router->aliasMiddleware('enforce.subscription', \Aero\Platform\Http\Middleware\EnforceSubscription::class);
-        $router->aliasMiddleware('check.installation', \Aero\Platform\Http\Middleware\CheckInstallation::class);
         $router->aliasMiddleware('maintenance', \Aero\Platform\Http\Middleware\CheckMaintenanceMode::class);
         $router->aliasMiddleware('permission', \Aero\Platform\Http\Middleware\PermissionMiddleware::class);
         $router->aliasMiddleware('role', \Aero\Platform\Http\Middleware\EnsureUserHasRole::class);
@@ -625,10 +629,15 @@ class AeroPlatformServiceProvider extends ServiceProvider
      *
      * Redirects unauthenticated users to the appropriate login page
      * based on domain context (admin vs tenant).
+     * 
+     * IMPORTANT: Do NOT set a global default guard with shouldUse().
+     * The default guard should remain 'web' for tenant domains.
+     * Admin routes explicitly use 'auth:landlord' middleware.
      */
     protected function configureGuestRedirect(): void
     {
-        $this->app['auth']->shouldUse('landlord');
+        // REMOVED: $this->app['auth']->shouldUse('landlord');
+        // This was causing issues - admin routes already use auth:landlord explicitly
 
         // Configure the Authenticate middleware to redirect to admin.login for landlord guard
         $this->app->resolving(\Illuminate\Auth\Middleware\Authenticate::class, function ($middleware) {
@@ -645,8 +654,8 @@ class AeroPlatformServiceProvider extends ServiceProvider
                     return route('tenant.login');
                 }
 
-                // Fallback to admin.login
-                return route('admin.login');
+                // Fallback to login route
+                return route('login');
             });
         });
 
