@@ -4,8 +4,6 @@ namespace Aero\Core\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureInstalled
@@ -30,14 +28,8 @@ class EnsureInstalled
             return $next($request);
         }
 
-        $installationLockFile = storage_path('installed');
-        $isInstalled = File::exists($installationLockFile);
-
-        // Check if database is accessible
-        $databaseAccessible = $this->isDatabaseAccessible();
-
-        // If not installed or database not accessible, redirect to /install
-        if (! $isInstalled || ! $databaseAccessible) {
+        // Check if system is installed using the authoritative file-based detection
+        if (!$this->isInstalled()) {
             return redirect('/install');
         }
 
@@ -45,20 +37,16 @@ class EnsureInstalled
     }
 
     /**
-     * Check if the database is accessible and has required tables.
+     * Check if the system is installed using file-based detection.
+     * 
+     * This is the ONLY authoritative method for checking installation status.
+     * Never use database queries for installation detection as they can fail
+     * before the database is configured.
+     * 
+     * @return bool
      */
-    protected function isDatabaseAccessible(): bool
+    protected function isInstalled(): bool
     {
-        try {
-            DB::connection()->getPdo();
-            // Check if essential tables exist (users table is required for standalone system)
-            if (! DB::getSchemaBuilder()->hasTable('users')) {
-                return false;
-            }
-
-            return true;
-        } catch (\Exception $e) {
-            return false;
-        }
+        return file_exists(storage_path('app/aeos.installed'));
     }
 }

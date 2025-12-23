@@ -91,7 +91,7 @@ class CoreModuleProvider extends AbstractModuleProvider
     public function boot(): void
     {
         // In standalone mode, load installation routes if not installed
-        if (config('aero.mode') === 'standalone' && !file_exists(storage_path('installed'))) {
+        if (config('aero.mode') === 'standalone' && !file_exists(storage_path('app/aeos.installed'))) {
             // Load installation routes WITHOUT module prefix
             \Illuminate\Support\Facades\Route::middleware(['web'])
                 ->group(__DIR__.'/../../routes/installation.php');
@@ -204,6 +204,10 @@ class CoreModuleProvider extends AbstractModuleProvider
         $router->aliasMiddleware('role', \Aero\Core\Http\Middleware\EnsureUserHasRole::class);
         $router->aliasMiddleware('ensure.installed', \Aero\Core\Http\Middleware\EnsureInstalled::class);
         $router->aliasMiddleware('prevent.installed', \Aero\Core\Http\Middleware\PreventInstalledAccess::class);
+        
+        // Note: BootstrapGuard is already registered globally in register() method
+        // for standalone mode, so we don't need to add EnsureInstalled to web group.
+        // The alias is kept for explicit route usage if needed.
     }
 
     /**

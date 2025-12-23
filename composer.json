@@ -19,11 +19,11 @@
     ],
     "require": {
         "php": "^8.2",
-        "aero/platform": "@dev",
-        "aero/ui": "@dev",
         "aero/core": "@dev",
         "aero/hrm": "@dev",
-    
+        "aero/platform": "@dev",
+        "aero/ui": "@dev",
+        "jenssegers/agent": "^2.6",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1"
     },

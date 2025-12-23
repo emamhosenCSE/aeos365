@@ -35,19 +35,20 @@ class AeroPlatformServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Register the TenancyBootstrapServiceProvider FIRST
-        // CRITICAL: This registers event listeners for TenancyInitialized which
-        // runs the DatabaseTenancyBootstrapper to switch DB connections
-        $this->app->register(\Aero\Platform\Providers\TenancyBootstrapServiceProvider::class);
-
         // Disable Fortify's default routes - we define auth routes with proper domain restrictions
         // Admin subdomain uses Platform's AuthenticatedSessionController
         // Tenant subdomains use Core's AuthenticatedSessionController
         Fortify::ignoreRoutes();
 
-        // Set aero.mode to 'saas' - Platform is the SaaS orchestrator
-        // This MUST be set before any module checks for mode
-        Config::set('aero.mode', 'saas');
+        // CRITICAL: Only register tenancy if installed AND in SaaS mode
+        // This prevents tenancy from being enabled during installation
+        // or in standalone mode
+        if ($this->installed() && $this->isSaasMode()) {
+            // Register the TenancyBootstrapServiceProvider
+            // CRITICAL: This registers event listeners for TenancyInitialized which
+            // runs the DatabaseTenancyBootstrapper to switch DB connections
+            $this->app->register(\Aero\Platform\Providers\TenancyBootstrapServiceProvider::class);
+        }
 
         // Override Core's migrator to ONLY use platform migrations on landlord database
         // Core, HRM, CRM and other module migrations are for TENANT databases only
@@ -62,12 +63,25 @@ class AeroPlatformServiceProvider extends ServiceProvider
         // Platform provides the SaaS implementation using stancl/tenancy
         $this->app->singleton(TenantScopeInterface::class, SaaSTenantScope::class);
 
-        // Register services as singletons
-        $this->app->singleton(ModuleAccessService::class);
-        $this->app->singleton(RoleModuleAccessService::class);
-        $this->app->singleton(PlatformSettingService::class);
+        // Register services as singletons (lazy-loaded to avoid DB access pre-install)
+        $this->app->singleton(ModuleAccessService::class, function ($app) {
+            return new ModuleAccessService;
+        });
+
+        $this->app->singleton(RoleModuleAccessService::class, function ($app) {
+            return new RoleModuleAccessService;
+        });
+
+        $this->app->singleton(PlatformSettingService::class, function ($app) {
+            return new PlatformSettingService;
+        });
+
         $this->app->singleton(ErrorLogService::class);
         $this->app->singleton(SslCommerzService::class);
+
+        // Register tenant lifecycle services
+        $this->app->singleton(\Aero\Platform\Services\Tenant\TenantRetentionService::class);
+        $this->app->singleton(\Aero\Platform\Services\Tenant\TenantPurgeService::class);
 
         // Configure auth guards and providers programmatically
         $this->configureAuth();
@@ -119,6 +133,13 @@ class AeroPlatformServiceProvider extends ServiceProvider
 
         // Register middleware (including HandleInertiaRequests which intercepts "/")
         $this->registerMiddleware();
+
+        // Register commands
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \Aero\Platform\Console\Commands\PurgeExpiredTenants::class,
+            ]);
+        }
 
         // Publish assets
         $this->registerPublishing();
@@ -279,6 +300,8 @@ class AeroPlatformServiceProvider extends ServiceProvider
         $router->aliasMiddleware('maintenance', \Aero\Platform\Http\Middleware\CheckMaintenanceMode::class);
         $router->aliasMiddleware('permission', \Aero\Platform\Http\Middleware\PermissionMiddleware::class);
         $router->aliasMiddleware('role', \Aero\Platform\Http\Middleware\EnsureUserHasRole::class);
+        $router->aliasMiddleware('landlord', \Aero\Platform\Http\Middleware\EnsureLandlordGuard::class);
+        $router->aliasMiddleware('tenant.active', \Aero\Platform\Http\Middleware\EnsureTenantIsActive::class);
         $router->aliasMiddleware('platform.super.admin', \Aero\Platform\Http\Middleware\PlatformSuperAdmin::class);
         $router->aliasMiddleware('tenant.super.admin', \Aero\Platform\Http\Middleware\TenantSuperAdmin::class);
         $router->aliasMiddleware('tenant.setup', \Aero\Platform\Http\Middleware\EnsureTenantIsSetup::class);
@@ -322,16 +345,89 @@ class AeroPlatformServiceProvider extends ServiceProvider
     /**
      * Configure database connections programmatically.
      * Adds 'central' connection for landlord models.
+     * 
+     * Priority: .env DB_DATABASE > installation_db_config.json > fallback
      */
     protected function configureDatabase(): void
     {
         // Get the default mysql configuration as a base
         $mysqlConfig = config('database.connections.mysql', []);
 
+        // Determine database name from multiple sources
+        $database = $this->resolveDatabase();
+
+        // Update the default mysql connection with resolved database
+        Config::set('database.connections.mysql.database', $database);
+
         // Add 'central' connection (same as default, but explicit for landlord models)
         Config::set('database.connections.central', array_merge($mysqlConfig, [
-            'database' => env('DB_DATABASE', 'eos365'),
+            'database' => $database,
         ]));
+    }
+
+    /**
+     * Resolve the database name from available sources.
+     * 
+     * Priority:
+     * 1. .env DB_DATABASE (if set and non-empty)
+     * 2. installation_db_config.json (installation wizard stored config)
+     * 3. Fallback to 'eos365'
+     */
+    protected function resolveDatabase(): string
+    {
+        // Priority 1: Check .env
+        $envDatabase = env('DB_DATABASE');
+        if (!empty($envDatabase)) {
+            return $envDatabase;
+        }
+
+        // Priority 2: Check installation config file
+        $configPath = storage_path('installation_db_config.json');
+        if (file_exists($configPath)) {
+            try {
+                $config = json_decode(file_get_contents($configPath), true);
+                if (!empty($config['db_database'])) {
+                    // Also update host/port/user/pass from installation config
+                    $this->applyInstallationDbConfig($config);
+                    return $config['db_database'];
+                }
+            } catch (\Throwable $e) {
+                // Silently ignore parse errors
+            }
+        }
+
+        // Priority 3: Fallback
+        return 'eos365';
+    }
+
+    /**
+     * Apply full database configuration from installation config file.
+     */
+    protected function applyInstallationDbConfig(array $config): void
+    {
+        $mysqlConfig = config('database.connections.mysql', []);
+
+        if (!empty($config['db_host'])) {
+            Config::set('database.connections.mysql.host', $config['db_host']);
+        }
+        if (!empty($config['db_port'])) {
+            Config::set('database.connections.mysql.port', $config['db_port']);
+        }
+        if (!empty($config['db_username'])) {
+            Config::set('database.connections.mysql.username', $config['db_username']);
+        }
+        if (isset($config['db_password'])) {
+            $password = $config['db_password'];
+            // Decrypt if encrypted
+            if (!empty($config['db_password_encrypted']) && !empty($password)) {
+                try {
+                    $password = \Illuminate\Support\Facades\Crypt::decryptString($password);
+                } catch (\Throwable $e) {
+                    // Use as-is if decryption fails
+                }
+            }
+            Config::set('database.connections.mysql.password', $password);
+        }
     }
 
     /**
@@ -576,5 +672,30 @@ class AeroPlatformServiceProvider extends ServiceProvider
             // Default fallback
             return '/';
         });
+    }
+
+    /**
+     * Check if the system is installed using file-based detection.
+     * 
+     * @return bool
+     */
+    protected function installed(): bool
+    {
+        return file_exists(storage_path('app/aeos.installed'));
+    }
+
+    /**
+     * Check if system is in SaaS mode using file-based detection.
+     * Mode is set during installation and immutable at runtime.
+     * 
+     * @return bool
+     */
+    protected function isSaasMode(): bool
+    {
+        if (!file_exists(storage_path('app/aeos.mode'))) {
+            return false;
+        }
+        
+        return trim(file_get_contents(storage_path('app/aeos.mode'))) === 'saas';
     }
 }

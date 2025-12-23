@@ -99,6 +99,8 @@ return array(
     'Laravel\\Cashier\\Database\\Factories\\' => array($vendorDir . '/laravel/cashier/database/factories'),
     'Laravel\\Cashier\\' => array($vendorDir . '/laravel/cashier/src'),
     'Laravel\\Boost\\' => array($vendorDir . '/laravel/boost/src'),
+    'Jenssegers\\Agent\\' => array($vendorDir . '/jenssegers/agent/src'),
+    'Jaybizzle\\CrawlerDetect\\' => array($vendorDir . '/jaybizzle/crawler-detect/src'),
     'Inertia\\' => array($vendorDir . '/inertiajs/inertia-laravel/src'),
     'Illuminate\\Support\\' => array($vendorDir . '/laravel/framework/src/Illuminate/Macroable', $vendorDir . '/laravel/framework/src/Illuminate/Collections', $vendorDir . '/laravel/framework/src/Illuminate/Conditionable', $vendorDir . '/laravel/framework/src/Illuminate/Reflection'),
     'Illuminate\\' => array($vendorDir . '/laravel/framework/src/Illuminate'),
