@@ -39,7 +39,7 @@ return [
      * Database tenancy config. Used by DatabaseTenancyBootstrapper.
      */
     'database' => [
-        'central_connection' => env('DB_CONNECTION', 'central'),
+        'central_connection' => 'central',
 
         /**
          * Connection used as a "template" for the dynamically created tenant database connection.
@@ -185,7 +185,13 @@ return [
      */
     'migration_parameters' => [
         '--force' => true, // This needs to be true to run migrations in production.
-        '--path' => [database_path('migrations/tenant')],
+        '--path' => [
+            // Tenant migrations from packages (monorepo structure)
+            base_path('vendor/aero/core/database/migrations'),
+            base_path('vendor/aero/hrm/database/migrations'),
+            // App-level tenant migrations (if any)
+            database_path('migrations/tenant'),
+        ],
         '--realpath' => true,
     ],
 

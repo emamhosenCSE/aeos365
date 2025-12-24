@@ -2,6 +2,7 @@
 
 namespace Aero\Core\Http\Middleware;
 
+use Aero\Core\Contracts\DomainContextContract;
 use Aero\Core\Http\Resources\SystemSettingResource;
 use Aero\Core\Models\SystemSetting;
 use Aero\Core\Services\NavigationRegistry;
@@ -36,10 +37,17 @@ class HandleInertiaRequests extends Middleware
 
     /**
      * Handle the incoming request.
+<<<<<<< Updated upstream
      * 
      * In SaaS mode on central/admin domains, skip this middleware entirely
      * and let Platform's HandleInertiaRequests handle everything.
      * 
+=======
+     *
+     * In SaaS mode on central/admin domains, skip this middleware entirely
+     * and let Platform's HandleInertiaRequests handle everything.
+     *
+>>>>>>> Stashed changes
      * In standalone mode or on tenant domains, this middleware handles Inertia requests.
      *
      * @return \Symfony\Component\HttpFoundation\Response
@@ -47,6 +55,7 @@ class HandleInertiaRequests extends Middleware
     public function handle(Request $request, \Closure $next)
     {
         // In SaaS mode, skip on central/admin domains - Platform handles those
+<<<<<<< Updated upstream
         if (is_saas_mode() && class_exists('Aero\Platform\Http\Middleware\IdentifyDomainContext')) {
             $context = $request->attributes->get('domain_context');
             
@@ -60,6 +69,18 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
+=======
+        if (is_saas_mode()) {
+            $context = $request->attributes->get('domain_context');
+
+            // On admin/platform domains, let Platform's middleware handle everything
+            // Using constants from Core's DomainContextContract (no Platform dependency)
+            if (in_array($context, [DomainContextContract::CONTEXT_ADMIN, DomainContextContract::CONTEXT_PLATFORM], true)) {
+                return $next($request);
+            }
+        }
+
+>>>>>>> Stashed changes
         // Intercept root route "/" and redirect appropriately (standalone mode or tenant context)
         if ($request->is('/') || $request->path() === '/') {
             if (Auth::check()) {
@@ -101,7 +122,11 @@ class HandleInertiaRequests extends Middleware
         // - Tenant context: Core provides tenant navigation, Platform provides tenant-specific props
         $context = $request->attributes->get('domain_context', 'tenant');
         $isSaaSMode = is_saas_mode();
+<<<<<<< Updated upstream
         
+=======
+
+>>>>>>> Stashed changes
         // Skip sharing props for admin/platform contexts in SaaS mode
         // Platform's HandleInertiaRequests handles those contexts completely
         if ($isSaaSMode && ($context === 'admin' || $context === 'platform')) {
@@ -142,7 +167,8 @@ class HandleInertiaRequests extends Middleware
             'siteName' => $companyName,
         ]);
 
-        return [
+        // Build base props
+        $props = [
             ...parent::share($request),
             'auth' => $this->getAuthProps($user),
             'app' => [
@@ -150,6 +176,7 @@ class HandleInertiaRequests extends Middleware
                 'version' => config('app.version', '1.0.0'),
                 'environment' => config('app.env', 'production'),
             ],
+            'context' => 'tenant',
             'systemSettings' => $systemSettingsPayload,
             'branding' => $branding,
             'theme' => [
@@ -170,6 +197,22 @@ class HandleInertiaRequests extends Middleware
                 'info' => $request->session()->get('info'),
             ],
         ];
+
+        // Add SaaS-specific props when running in SaaS mode with tenancy
+        if ($isSaaSMode && function_exists('tenant') && tenant()) {
+            $props['tenant'] = [
+                'id' => tenant('id'),
+                'name' => tenant('name'),
+                'subdomain' => tenant('subdomain'),
+                'status' => tenant('status'),
+                'modules' => tenant('modules') ?? [],
+            ];
+            $props['aero'] = [
+                'mode' => 'saas',
+            ];
+        }
+
+        return $props;
     }
 
     /**

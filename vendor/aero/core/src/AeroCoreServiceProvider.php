@@ -27,6 +27,10 @@ use Laravel\Fortify\Fortify;
 class AeroCoreServiceProvider extends ServiceProvider
 {
     use ParsesHostDomain;
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
     /**
      * Register services.
      */
@@ -36,8 +40,19 @@ class AeroCoreServiceProvider extends ServiceProvider
             // CRITICAL: Inject global BootstrapGuard middleware FIRST
             // This ensures ALL requests are intercepted before routing
             // to redirect to /install if system is not installed
+<<<<<<< Updated upstream
             $kernel = $this->app->make(\Illuminate\Contracts\Http\Kernel::class);
             $kernel->pushMiddleware(\Aero\Core\Http\Middleware\BootstrapGuard::class);
+=======
+            //
+            // NOTE: Skip registration if Platform package is installed
+            // Platform has its own BootstrapGuard that handles multi-domain scenarios
+            // (redirecting tenant subdomains to platform domain for installation)
+            if (! class_exists(\Aero\Platform\AeroPlatformServiceProvider::class)) {
+                $kernel = $this->app->make(\Illuminate\Contracts\Http\Kernel::class);
+                $kernel->pushMiddleware(\Aero\Core\Http\Middleware\BootstrapGuard::class);
+            }
+>>>>>>> Stashed changes
 
             // Disable Fortify's default routes - Core provides its own auth routes
             // with Inertia.js rendering instead of Fortify's view responses
@@ -45,23 +60,29 @@ class AeroCoreServiceProvider extends ServiceProvider
 
             // Override the Migrator to exclude app's migration directory
             // Core and module packages provide all necessary migrations
-            $this->app->extend('migrator', function ($migrator, $app) {
-                return new class($app['migration.repository'], $app['db'], $app['files'], $app['events']) extends \Illuminate\Database\Migrations\Migrator
-                {
-                    public function getMigrationFiles($paths)
+            //
+            // NOTE: Skip this override if Platform is installed
+            // Platform has its own migrator override that restricts landlord migrations
+            // to only platform package migrations (tenants, domains, plans, etc.)
+            if (! class_exists(\Aero\Platform\AeroPlatformServiceProvider::class)) {
+                $this->app->extend('migrator', function ($migrator, $app) {
+                    return new class($app['migration.repository'], $app['db'], $app['files'], $app['events']) extends \Illuminate\Database\Migrations\Migrator
                     {
-                        // Get all migration files from all paths
-                        $files = parent::getMigrationFiles($paths);
+                        public function getMigrationFiles($paths)
+                        {
+                            // Get all migration files from all paths
+                            $files = parent::getMigrationFiles($paths);
 
-                        // Filter out files from app's database/migrations directory
-                        $appMigrationPath = database_path('migrations');
+                            // Filter out files from app's database/migrations directory
+                            $appMigrationPath = database_path('migrations');
 
-                        return collect($files)->reject(function ($path, $name) use ($appMigrationPath) {
-                            return str_starts_with($path, $appMigrationPath);
-                        })->all();
-                    }
-                };
-            });
+                            return collect($files)->reject(function ($path, $name) use ($appMigrationPath) {
+                                return str_starts_with($path, $appMigrationPath);
+                            })->all();
+                        }
+                    };
+                });
+            }
 
             // Merge configuration
             $this->mergeConfigFrom(__DIR__.'/../config/aero.php', 'aero');
@@ -83,7 +104,11 @@ class AeroCoreServiceProvider extends ServiceProvider
             // These services are lazy-loaded, so they won't cause issues pre-install
             $this->app->singleton(ModuleAccessService::class, function ($app) {
                 // Only instantiate if installed to avoid DB queries pre-install
+<<<<<<< Updated upstream
                 if (!file_exists(storage_path('app/aeos.installed'))) {
+=======
+                if (! file_exists(storage_path('app/aeos.installed'))) {
+>>>>>>> Stashed changes
                     return new class
                     {
                         public function __call($method, $args)
@@ -108,7 +133,11 @@ class AeroCoreServiceProvider extends ServiceProvider
 
             $this->app->singleton(RoleModuleAccessService::class, function ($app) {
                 // Only instantiate if installed to avoid DB queries pre-install
+<<<<<<< Updated upstream
                 if (!file_exists(storage_path('app/aeos.installed'))) {
+=======
+                if (! file_exists(storage_path('app/aeos.installed'))) {
+>>>>>>> Stashed changes
                     return new class
                     {
                         public function __call($method, $args)
@@ -179,7 +208,11 @@ class AeroCoreServiceProvider extends ServiceProvider
     {
         // Force file-based sessions BEFORE any session driver is instantiated
         // This allows installation to work without database tables
+<<<<<<< Updated upstream
         if (!$this->installed()) {
+=======
+        if (! $this->installed()) {
+>>>>>>> Stashed changes
             // Pre-configure session driver to file (before StartSession middleware runs)
             config(['session.driver' => 'file', 'cache.default' => 'file']);
         }
@@ -276,19 +309,19 @@ class AeroCoreServiceProvider extends ServiceProvider
         // Register Core widgets (order matters for display)
         $registry->registerMany([
             // Welcome header (full width)
-            new \Aero\Core\Widgets\WelcomeWidget(),
-            
+            new \Aero\Core\Widgets\WelcomeWidget,
+
             // Stats row (full width grid)
-            new \Aero\Core\Widgets\SystemStatsWidget(),
-            new \Aero\Core\Widgets\QuickActionsWidget(),
-            
+            new \Aero\Core\Widgets\SystemStatsWidget,
+            new \Aero\Core\Widgets\QuickActionsWidget,
+
             // Main content area (left 2/3)
-            new \Aero\Core\Widgets\RecentActivityWidget(),
-            new \Aero\Core\Widgets\NotificationsWidget(),
-            
+            new \Aero\Core\Widgets\RecentActivityWidget,
+            new \Aero\Core\Widgets\NotificationsWidget,
+
             // Sidebar area (right 1/3)
-            new \Aero\Core\Widgets\SecurityOverviewWidget(),
-            new \Aero\Core\Widgets\ActiveModulesWidget(),
+            new \Aero\Core\Widgets\SecurityOverviewWidget,
+            new \Aero\Core\Widgets\ActiveModulesWidget,
         ]);
     }
 
@@ -313,11 +346,16 @@ class AeroCoreServiceProvider extends ServiceProvider
         // Always register public API routes on all domains (version check, error logging)
         $this->registerPublicApiRoutes();
 
+<<<<<<< Updated upstream
         if (!$this->installed()) {
+=======
+        if (! $this->installed()) {
+>>>>>>> Stashed changes
             // System NOT installed - ONLY load installation routes
             // These work on ANY domain (platform, tenant, or standalone)
             Route::middleware(['web'])
                 ->group($routesPath.'/install.php');
+<<<<<<< Updated upstream
             return;
         }
 
@@ -337,30 +375,41 @@ class AeroCoreServiceProvider extends ServiceProvider
         if ($this->isSaasMode()) {
             // SaaS Mode: Core routes ONLY on tenant domains (NOT on central/admin domains)
             // AUTO-DETECT from browser request - no .env configuration needed
+=======
+>>>>>>> Stashed changes
 
-            if (! request()) {
-                // In console, load routes without domain restriction
-                Route::middleware(['web'])->group($routesPath.'/web.php');
+            return;
+        }
 
-                return;
-            }
+        // System IS installed - load runtime routes based on mode
+        $this->loadRuntimeRoutes();
+    }
 
-            $currentHost = request()->getHost();
+    /**
+     * Load runtime routes after installation is complete.
+     * Handles both SaaS and standalone modes.
+     *
+     * IMPORTANT: Following stancl/tenancy default pattern:
+     * - Register ALL routes unconditionally
+     * - Use middleware to control access (InitializeTenancyByDomain, PreventAccessFromCentralDomains)
+     * - This ensures routes exist for route() helper calls even when request is on different domain
+     */
+    protected function loadRuntimeRoutes(): void
+    {
+        $routesPath = __DIR__.'/../routes';
 
-            // Check if we're on a central domain (auto-detected)
-            $isCentralDomain = $this->isOnCentralDomain($currentHost);
-
-            if (! $isCentralDomain) {
-                // ONLY load core routes on tenant subdomains
-                // InitializeTenancyIfNotCentral initializes tenant, 'tenant' ensures context exists
-                Route::middleware([
-                    'web',
-                    \Aero\Core\Http\Middleware\InitializeTenancyIfNotCentral::class,
-                    'tenant',
-                ])->group($routesPath.'/web.php');
-            }
-            // On central domains: do NOT register core routes (platform owns those)
+        // Check if in SaaS mode (file-based detection)
+        if ($this->isSaasMode()) {
+            // SaaS Mode: Register core routes with tenant middleware
+            // Routes are registered unconditionally - middleware handles access control
+            // This follows stancl/tenancy's recommended pattern from their quickstart guide
+            Route::middleware([
+                'web',
+                \Aero\Core\Http\Middleware\InitializeTenancyIfNotCentral::class,
+                'tenant',
+            ])->group($routesPath.'/web.php');
         } else {
+<<<<<<< Updated upstream
             // Standalone Mode: Routes with standard web middleware on domain.com
             // NO tenancy middleware in standalone mode
 
@@ -369,6 +418,10 @@ class AeroCoreServiceProvider extends ServiceProvider
                 return;
             }
 
+=======
+            // Standalone Mode: Routes with standard web middleware
+            // NO tenancy middleware in standalone mode
+>>>>>>> Stashed changes
             Route::middleware(['web'])
                 ->group($routesPath.'/web.php');
         }
@@ -486,7 +539,11 @@ class AeroCoreServiceProvider extends ServiceProvider
 
     /**
      * Check if aero-platform is active.
+<<<<<<< Updated upstream
      * 
+=======
+     *
+>>>>>>> Stashed changes
      * @deprecated Use isSaasMode() instead for mode detection
      */
     protected function isPlatformActive(): bool
@@ -497,10 +554,15 @@ class AeroCoreServiceProvider extends ServiceProvider
     /**
      * Check if system is in SaaS mode using file-based detection.
      * Mode is set during installation and immutable at runtime.
+<<<<<<< Updated upstream
      * 
      * This is the ONLY authoritative method for mode detection.
      * 
      * @return bool
+=======
+     *
+     * This is the ONLY authoritative method for mode detection.
+>>>>>>> Stashed changes
      */
     protected function isSaasMode(): bool
     {
@@ -777,11 +839,17 @@ class AeroCoreServiceProvider extends ServiceProvider
 
     /**
      * Check if the system is installed using file-based detection.
+<<<<<<< Updated upstream
      * 
      * This is the ONLY authoritative method for checking installation status.
      * Never use database queries for installation detection.
      * 
      * @return bool
+=======
+     *
+     * This is the ONLY authoritative method for checking installation status.
+     * Never use database queries for installation detection.
+>>>>>>> Stashed changes
      */
     protected function installed(): bool
     {

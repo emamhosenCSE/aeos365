@@ -82,8 +82,9 @@ class AeroHrmServiceProvider extends ServiceProvider
     {
         $routesPath = __DIR__ . '/../routes';
 
-        // Check if aero-platform is active (SaaS mode)
-        if ($this->isPlatformActive()) {
+        // Check if running in SaaS mode (Platform active AND stancl/tenancy available)
+        // Note: isPlatformActive() checks class existence, isSaaSMode() checks runtime mode
+        if ($this->isPlatformActive() && $this->isSaaSMode()) {
             // SaaS Mode: InitializeTenancyIfNotCentral initializes tenant context,
             // 'tenant' middleware ensures valid tenant context exists
             Route::middleware([
@@ -96,7 +97,8 @@ class AeroHrmServiceProvider extends ServiceProvider
                 ->group($routesPath . '/web.php');
         } else {
             // Standalone Mode: Routes with standard web middleware on domain.com
-            Route::middleware(['web'])
+            // Also used when Platform is installed but not in SaaS mode
+            Route::middleware(['web', 'auth'])
                 ->prefix('hrm')
                 ->name('hrm.')
                 ->group($routesPath . '/web.php');
