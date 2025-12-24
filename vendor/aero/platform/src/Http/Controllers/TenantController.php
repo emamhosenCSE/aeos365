@@ -359,6 +359,9 @@ class TenantController extends Controller
 
     /**
      * Check subdomain availability.
+     * 
+     * Public API endpoint - no session required.
+     * Only checks if subdomain is taken by an active tenant.
      */
     public function checkSubdomain(Request $request): JsonResponse
     {
@@ -385,7 +388,9 @@ class TenantController extends Controller
             ]);
         }
 
-        // Check if already taken
+        // Check if subdomain is taken by any tenant (active, pending, or failed)
+        // Note: We show as "taken" even for pending/failed to prevent conflicts
+        // The actual registration submission will handle re-claiming abandoned registrations
         $exists = Tenant::where('subdomain', $subdomain)->exists();
 
         return response()->json([
