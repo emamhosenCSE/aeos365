@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInited2c25f22527022a76fbc30d9b27c1fd
+class ComposerStaticInit37fe6311437c75e94d972df967b2b5d2
 {
     public static $files = array (
         '6e3fae29631ef280660b3cdad06f25a8' => __DIR__ . '/..' . '/symfony/deprecation-contracts/function.php',
@@ -899,6 +899,7 @@ class ComposerStaticInited2c25f22527022a76fbc30d9b27c1fd
         'Aero\\Core\\Http\\Middleware\\TrackApiUsage' => __DIR__ . '/..' . '/aero/core/src/Http/Middleware/TrackApiUsage.php',
         'Aero\\Core\\Http\\Middleware\\TrimStrings' => __DIR__ . '/..' . '/aero/core/src/Http/Middleware/TrimStrings.php',
         'Aero\\Core\\Http\\Middleware\\TrustProxies' => __DIR__ . '/..' . '/aero/core/src/Http/Middleware/TrustProxies.php',
+        'Aero\\Core\\Http\\Middleware\\ValidateInertiaResponse' => __DIR__ . '/..' . '/aero/core/src/Http/Middleware/ValidateInertiaResponse.php',
         'Aero\\Core\\Http\\Requests\\AcceptTeamInvitationRequest' => __DIR__ . '/..' . '/aero/core/src/Http/Requests/AcceptTeamInvitationRequest.php',
         'Aero\\Core\\Http\\Requests\\SendTeamInvitationRequest' => __DIR__ . '/..' . '/aero/core/src/Http/Requests/SendTeamInvitationRequest.php',
         'Aero\\Core\\Http\\Requests\\StoreUserRequest' => __DIR__ . '/..' . '/aero/core/src/Http/Requests/StoreUserRequest.php',
@@ -982,6 +983,7 @@ class ComposerStaticInited2c25f22527022a76fbc30d9b27c1fd
         'Aero\\Core\\Services\\UserInvitationService' => __DIR__ . '/..' . '/aero/core/src/Services/UserInvitationService.php',
         'Aero\\Core\\Services\\UserRelationshipRegistry' => __DIR__ . '/..' . '/aero/core/src/Services/UserRelationshipRegistry.php',
         'Aero\\Core\\Services\\VersionService' => __DIR__ . '/..' . '/aero/core/src/Services/VersionService.php',
+        'Aero\\Core\\Support\\SafeRedirect' => __DIR__ . '/..' . '/aero/core/src/Support/SafeRedirect.php',
         'Aero\\Core\\Support\\TenantCache' => __DIR__ . '/..' . '/aero/core/src/Support/TenantCache.php',
         'Aero\\Core\\Traits\\AeroTenantable' => __DIR__ . '/..' . '/aero/core/src/Traits/AeroTenantable.php',
         'Aero\\Core\\Traits\\ParsesHostDomain' => __DIR__ . '/..' . '/aero/core/src/Traits/ParsesHostDomain.php',
@@ -10213,7 +10215,6 @@ class ComposerStaticInited2c25f22527022a76fbc30d9b27c1fd
         'ZipStream\\LocalFileHeader' => __DIR__ . '/..' . '/maennchen/zipstream-php/src/LocalFileHeader.php',
         'ZipStream\\OperationMode' => __DIR__ . '/..' . '/maennchen/zipstream-php/src/OperationMode.php',
         'ZipStream\\PackField' => __DIR__ . '/..' . '/maennchen/zipstream-php/src/PackField.php',
-        'ZipStream\\Stream\\CallbackStreamWrapper' => __DIR__ . '/..' . '/maennchen/zipstream-php/src/Stream/CallbackStreamWrapper.php',
         'ZipStream\\Time' => __DIR__ . '/..' . '/maennchen/zipstream-php/src/Time.php',
         'ZipStream\\Version' => __DIR__ . '/..' . '/maennchen/zipstream-php/src/Version.php',
         'ZipStream\\Zip64\\DataDescriptor' => __DIR__ . '/..' . '/maennchen/zipstream-php/src/Zip64/DataDescriptor.php',
@@ -10230,10 +10231,10 @@ class ComposerStaticInited2c25f22527022a76fbc30d9b27c1fd
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInited2c25f22527022a76fbc30d9b27c1fd::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInited2c25f22527022a76fbc30d9b27c1fd::$prefixDirsPsr4;
-            $loader->prefixesPsr0 = ComposerStaticInited2c25f22527022a76fbc30d9b27c1fd::$prefixesPsr0;
-            $loader->classMap = ComposerStaticInited2c25f22527022a76fbc30d9b27c1fd::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInit37fe6311437c75e94d972df967b2b5d2::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInit37fe6311437c75e94d972df967b2b5d2::$prefixDirsPsr4;
+            $loader->prefixesPsr0 = ComposerStaticInit37fe6311437c75e94d972df967b2b5d2::$prefixesPsr0;
+            $loader->classMap = ComposerStaticInit37fe6311437c75e94d972df967b2b5d2::$classMap;
 
         }, null, ClassLoader::class);
     }
