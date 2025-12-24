@@ -1,1 +1,0 @@
-import{u as d}from"./chunk-TW2E3XVA-iMcMikRA.js";import{q as p,t as u,j as i,w as x}from"./app-DInl32dX.js";var s=p((e,a)=>{const{as:r,children:t,className:l,...m}=e,{slots:f,classNames:o}=d(),n=u(a),c=r||"footer";return i.jsx(c,{ref:n,className:f.footer({class:x(o?.footer,l)}),...m,children:t})});s.displayName="HeroUI.ModalFooter";var R=s;export{R as m};
