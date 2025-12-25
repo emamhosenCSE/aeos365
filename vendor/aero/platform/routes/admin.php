@@ -130,6 +130,22 @@ Route::middleware(['auth:landlord'])->group(function () {
             return Inertia::render('Platform/Admin/Tenants/Create');
         })->middleware(['module:tenants,tenant-list,tenant-management,create'])->name('create');
 
+        // Domain Management (MUST be before /{tenant} to avoid being matched as tenant ID)
+        Route::get('/domains', function () {
+            return Inertia::render('Platform/Admin/Tenants/Domains');
+        })->middleware(['module:tenants,domains'])->name('domains');
+
+        // Database Management (MUST be before /{tenant} to avoid being matched as tenant ID)
+        Route::get('/databases', function () {
+            return Inertia::render('Platform/Admin/Tenants/Databases');
+        })->middleware(['module:tenants,databases'])->name('databases');
+
+        // Tenant Management (bulk operations) (MUST be before /{tenant} to avoid being matched as tenant ID)
+        Route::get('/management', function () {
+            return Inertia::render('Platform/Admin/Tenants/TenantManagement');
+        })->middleware(['module:tenants,tenant-list'])->name('management');
+
+        // Dynamic routes with {tenant} parameter MUST come after static routes
         Route::get('/{tenant}', function ($tenant) {
             return Inertia::render('Platform/Admin/Tenants/Show', ['tenantId' => $tenant]);
         })->middleware(['module:tenants,tenant-list,tenant-management,view'])->name('show');
@@ -137,16 +153,6 @@ Route::middleware(['auth:landlord'])->group(function () {
         Route::get('/{tenant}/edit', function ($tenant) {
             return Inertia::render('Platform/Admin/Tenants/Edit', ['tenantId' => $tenant]);
         })->middleware(['module:tenants,tenant-list,tenant-management,update'])->name('edit');
-
-        // Domain Management
-        Route::get('/domains', function () {
-            return Inertia::render('Platform/Admin/Tenants/Domains');
-        })->middleware(['module:tenants,domains'])->name('domains');
-
-        // Database Management
-        Route::get('/databases', function () {
-            return Inertia::render('Platform/Admin/Tenants/Databases');
-        })->middleware(['module:tenants,databases'])->name('databases');
 
         // Tenant Impersonation
         Route::post('/{tenant}/impersonate', [ImpersonationController::class, 'impersonate'])
@@ -327,13 +333,62 @@ Route::middleware(['auth:landlord'])->group(function () {
     // =========================================================================
     // Subscription Plans
     Route::middleware(['module:subscriptions'])->prefix('plans')->name('admin.plans.')->group(function () {
+        // Plan List Page
         Route::get('/', function () {
-            return Inertia::render('Platform/Admin/Plans/Index');
+            return Inertia::render('Platform/Admin/Plans/PlanList');
         })->middleware(['module:subscriptions,plans'])->name('index');
 
+        // Create Plan Page
         Route::get('/create', function () {
-            return Inertia::render('Platform/Admin/Plans/Create');
+            return Inertia::render('Platform/Admin/Plans/PlanForm');
         })->middleware(['module:subscriptions,plans,plan-list,create'])->name('create');
+
+        // View Plan Details Page
+        Route::get('/{plan}', function (\Aero\Platform\Models\Plan $plan) {
+            $plan->load(['modules', 'subscriptions.tenant']);
+            return Inertia::render('Platform/Admin/Plans/PlanShow', [
+                'plan' => $plan,
+                'stats' => [
+                    'subscribers_count' => $plan->subscriptions()->where('status', 'active')->count(),
+                    'mrr' => $plan->subscriptions()->where('status', 'active')->sum('amount'),
+                    'features_count' => is_array($plan->features) ? count($plan->features) : 0,
+                ],
+            ]);
+        })->middleware(['module:subscriptions,plans,plan-list,view'])->name('show');
+
+        // Edit Plan Page
+        Route::get('/{plan}/edit', function (\Aero\Platform\Models\Plan $plan) {
+            $plan->load(['modules']);
+            return Inertia::render('Platform/Admin/Plans/PlanForm', [
+                'plan' => $plan,
+            ]);
+        })->middleware(['module:subscriptions,plans,plan-list,update'])->name('edit');
+
+        // Clone Plan Page (pre-fill form with existing plan data)
+        Route::get('/{plan}/clone', function (\Aero\Platform\Models\Plan $plan) {
+            $plan->load(['modules']);
+            $cloneData = $plan->replicate();
+            $cloneData->name = $plan->name . ' (Copy)';
+            $cloneData->slug = $plan->slug . '-copy';
+            return Inertia::render('Platform/Admin/Plans/PlanForm', [
+                'plan' => $cloneData,
+                'isClone' => true,
+            ]);
+        })->middleware(['module:subscriptions,plans,plan-list,create'])->name('clone');
+
+        // Plan CRUD API Endpoints
+        Route::post('/', [PlanController::class, 'store'])
+            ->middleware(['module:subscriptions,plans,plan-list,create'])
+            ->name('store');
+        Route::put('/{plan}', [PlanController::class, 'update'])
+            ->middleware(['module:subscriptions,plans,plan-list,update'])
+            ->name('update');
+        Route::delete('/{plan}', [PlanController::class, 'destroy'])
+            ->middleware(['module:subscriptions,plans,plan-list,delete'])
+            ->name('destroy');
+        Route::post('/{plan}/archive', [PlanController::class, 'archive'])
+            ->middleware(['module:subscriptions,plans,plan-list,update'])
+            ->name('archive');
 
         // Plan-Module Management API
         Route::get('/{plan}/modules', [PlanModuleController::class, 'getPlanModules'])
@@ -351,6 +406,11 @@ Route::middleware(['auth:landlord'])->group(function () {
         Route::put('/{plan}/modules/{module}', [PlanModuleController::class, 'updateModuleConfig'])
             ->middleware(['module:subscriptions,plans,plan-list,update'])
             ->name('modules.update');
+
+        // Plan Statistics API
+        Route::get('/{plan}/stats', [PlanController::class, 'stats'])
+            ->middleware(['module:subscriptions,plans,plan-list,view'])
+            ->name('stats');
     });
 
     // Plans API
@@ -545,8 +605,12 @@ Route::middleware(['auth:landlord'])->group(function () {
         })->middleware(['module:developer-tools,api-management'])->name('api');
 
         Route::get('/webhooks', function () {
-            return Inertia::render('Platform/Admin/Developer/Webhooks');
+            return Inertia::render('Platform/Admin/Webhooks/WebhookManager');
         })->middleware(['module:developer-tools,webhooks'])->name('webhooks');
+
+        Route::get('/rate-limits', function () {
+            return Inertia::render('Platform/Admin/RateLimit/RateLimitConfig');
+        })->middleware(['module:developer-tools,api-management'])->name('rate-limits');
 
         Route::get('/debug', function () {
             return Inertia::render('Platform/Admin/Developer/Debug');
@@ -599,6 +663,16 @@ Route::middleware(['auth:landlord'])->group(function () {
             return Inertia::render('Platform/Admin/Analytics/Reports');
         })->middleware(['module:platform-analytics,platform-reports'])->name('reports');
 
+        // Advanced Analytics Dashboard (Phase 3 Week 6)
+        Route::get('/advanced', function () {
+            return Inertia::render('Platform/Admin/Analytics/AdvancedAnalytics');
+        })->middleware(['module:platform-analytics,revenue-analytics'])->name('advanced');
+
+        // Report Builder (Phase 3 Week 6)
+        Route::get('/report-builder', function () {
+            return Inertia::render('Platform/Admin/Reports/ReportBuilder');
+        })->middleware(['module:platform-analytics,platform-reports'])->name('report-builder');
+
         // Module Analytics API
         Route::get('/modules', [ModuleAnalyticsController::class, 'index'])
             ->middleware(['module:platform-analytics,usage-analytics'])
@@ -609,6 +683,42 @@ Route::middleware(['auth:landlord'])->group(function () {
         Route::get('/modules-trends', [ModuleAnalyticsController::class, 'trends'])
             ->middleware(['module:platform-analytics,usage-analytics,feature-usage,view'])
             ->name('modules.trends');
+    });
+
+    // =========================================================================
+    // REPORT MANAGEMENT API (Phase 3 Week 6)
+    // =========================================================================
+    Route::middleware(['module:platform-analytics'])->prefix('reports')->name('admin.reports.')->group(function () {
+        Route::get('/', [\Aero\Platform\Http\Controllers\Admin\ReportController::class, 'index'])
+            ->middleware(['module:platform-analytics,platform-reports'])
+            ->name('index');
+        Route::post('/', [\Aero\Platform\Http\Controllers\Admin\ReportController::class, 'store'])
+            ->middleware(['module:platform-analytics,platform-reports,report-list,create'])
+            ->name('store');
+        Route::get('/templates', [\Aero\Platform\Http\Controllers\Admin\ReportController::class, 'templates'])
+            ->middleware(['module:platform-analytics,platform-reports'])
+            ->name('templates');
+        Route::post('/generate', [\Aero\Platform\Http\Controllers\Admin\ReportController::class, 'generate'])
+            ->middleware(['module:platform-analytics,platform-reports'])
+            ->name('generate');
+        Route::get('/{id}', [\Aero\Platform\Http\Controllers\Admin\ReportController::class, 'show'])
+            ->middleware(['module:platform-analytics,platform-reports,report-list,view'])
+            ->name('show');
+        Route::put('/{id}', [\Aero\Platform\Http\Controllers\Admin\ReportController::class, 'update'])
+            ->middleware(['module:platform-analytics,platform-reports,report-list,update'])
+            ->name('update');
+        Route::delete('/{id}', [\Aero\Platform\Http\Controllers\Admin\ReportController::class, 'destroy'])
+            ->middleware(['module:platform-analytics,platform-reports,report-list,delete'])
+            ->name('destroy');
+        Route::post('/{id}/run', [\Aero\Platform\Http\Controllers\Admin\ReportController::class, 'run'])
+            ->middleware(['module:platform-analytics,platform-reports,report-list,execute'])
+            ->name('run');
+        Route::post('/{id}/duplicate', [\Aero\Platform\Http\Controllers\Admin\ReportController::class, 'duplicate'])
+            ->middleware(['module:platform-analytics,platform-reports,report-list,create'])
+            ->name('duplicate');
+        Route::get('/{id}/executions', [\Aero\Platform\Http\Controllers\Admin\ReportController::class, 'executions'])
+            ->middleware(['module:platform-analytics,platform-reports,report-list,view'])
+            ->name('executions');
     });
 
     // =========================================================================
@@ -905,6 +1015,45 @@ Route::middleware(['auth:landlord'])->group(function () {
             Route::delete('/{errorLog}', [ErrorLogController::class, 'destroy'])->name('destroy');
             Route::post('/bulk-resolve', [ErrorLogController::class, 'bulkResolve'])->name('bulk-resolve');
             Route::post('/bulk-destroy', [ErrorLogController::class, 'bulkDestroy'])->name('bulk-destroy');
+        });
+
+        // Webhook Management API
+        Route::prefix('webhooks')->name('webhooks.')->group(function () {
+            Route::get('/', [\Aero\Platform\Http\Controllers\Integrations\WebhookController::class, 'index'])->name('index');
+            Route::post('/', [\Aero\Platform\Http\Controllers\Integrations\WebhookController::class, 'store'])->name('store');
+            Route::put('/{id}', [\Aero\Platform\Http\Controllers\Integrations\WebhookController::class, 'update'])->name('update');
+            Route::delete('/{id}', [\Aero\Platform\Http\Controllers\Integrations\WebhookController::class, 'destroy'])->name('destroy');
+            Route::put('/{id}/toggle', [\Aero\Platform\Http\Controllers\Integrations\WebhookController::class, 'toggle'])->name('toggle');
+            Route::post('/{id}/test', [\Aero\Platform\Http\Controllers\Integrations\WebhookController::class, 'test'])->name('test');
+            Route::get('/{id}/logs', [\Aero\Platform\Http\Controllers\Integrations\WebhookController::class, 'logs'])->name('logs');
+            Route::get('/{id}/stats', [\Aero\Platform\Http\Controllers\Integrations\WebhookController::class, 'stats'])->name('stats');
+            Route::get('/events', [\Aero\Platform\Http\Controllers\Integrations\WebhookController::class, 'events'])->name('events');
+        });
+
+        // Bulk Tenant Operations API
+        Route::prefix('bulk-tenant-operations')->name('bulk-tenant-operations.')->group(function () {
+            Route::post('/', [\Aero\Platform\Http\Controllers\Admin\BulkTenantOperationsController::class, 'execute'])->name('execute');
+            Route::post('/suspend', [\Aero\Platform\Http\Controllers\Admin\BulkTenantOperationsController::class, 'suspend'])->name('suspend');
+            Route::post('/activate', [\Aero\Platform\Http\Controllers\Admin\BulkTenantOperationsController::class, 'activate'])->name('activate');
+            Route::post('/delete', [\Aero\Platform\Http\Controllers\Admin\BulkTenantOperationsController::class, 'delete'])->name('delete');
+            Route::post('/update-plan', [\Aero\Platform\Http\Controllers\Admin\BulkTenantOperationsController::class, 'updatePlan'])->name('update-plan');
+            Route::post('/reset-quota', [\Aero\Platform\Http\Controllers\Admin\BulkTenantOperationsController::class, 'resetQuota'])->name('reset-quota');
+            Route::post('/preview', [\Aero\Platform\Http\Controllers\Admin\BulkTenantOperationsController::class, 'preview'])->name('preview');
+            Route::get('/history', [\Aero\Platform\Http\Controllers\Admin\BulkTenantOperationsController::class, 'history'])->name('history');
+        });
+
+        // Rate Limit Configuration API
+        Route::prefix('rate-limit-configs')->name('rate-limit-configs.')->group(function () {
+            Route::get('/', [\Aero\Platform\Http\Controllers\Admin\RateLimitConfigController::class, 'index'])->name('index');
+            Route::get('/defaults', [\Aero\Platform\Http\Controllers\Admin\RateLimitConfigController::class, 'defaults'])->name('defaults');
+            Route::get('/stats', [\Aero\Platform\Http\Controllers\Admin\RateLimitConfigController::class, 'stats'])->name('stats');
+            Route::get('/{id}', [\Aero\Platform\Http\Controllers\Admin\RateLimitConfigController::class, 'show'])->name('show');
+            Route::post('/', [\Aero\Platform\Http\Controllers\Admin\RateLimitConfigController::class, 'store'])->name('store');
+            Route::put('/{id}', [\Aero\Platform\Http\Controllers\Admin\RateLimitConfigController::class, 'update'])->name('update');
+            Route::delete('/{id}', [\Aero\Platform\Http\Controllers\Admin\RateLimitConfigController::class, 'destroy'])->name('destroy');
+            Route::put('/{id}/toggle', [\Aero\Platform\Http\Controllers\Admin\RateLimitConfigController::class, 'toggle'])->name('toggle');
+            Route::post('/{id}/test', [\Aero\Platform\Http\Controllers\Admin\RateLimitConfigController::class, 'test'])->name('test');
+            Route::post('/bulk-update', [\Aero\Platform\Http\Controllers\Admin\RateLimitConfigController::class, 'bulkUpdate'])->name('bulk-update');
         });
     });
 });

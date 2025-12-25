@@ -1,0 +1,4 @@
+import{j as d,c as t,a as o}from"./app-DLWZL5EI.js";import{c as s}from"./chunk-C6WKGNND-Dq1nEPC1.js";const n=()=>({background:`linear-gradient(135deg, 
+        var(--theme-content1, #FAFAFA) 20%, 
+        var(--theme-content2, #F4F4F5) 10%, 
+        var(--theme-content3, #F1F3F4) 20%)`,borderColor:"var(--theme-divider, #E4E4E7)",borderWidth:"var(--borderWidth, 2px)",borderStyle:"solid",borderRadius:"var(--borderRadius, 12px)",fontFamily:'var(--fontFamily, "Inter")'}),l=({children:e,className:r="",...a})=>d.jsx(t,{className:`transition-all duration-200 ${r}`,style:n(),...a,children:e}),c=({children:e,className:r="",...a})=>d.jsx(s,{className:`border-b border-divider p-4 ${r}`,style:{borderBottom:"1px solid var(--theme-divider, #E4E4E7)"},...a,children:e}),b=({children:e,className:r="",...a})=>d.jsx(o,{className:`p-4 ${r}`,...a,children:e});export{c as T,b as a,l as b};
